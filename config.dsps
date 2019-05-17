@@ -1,0 +1,184 @@
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+# Define groups & users
+# A user can only belong to a single group but they may appear
+# in as many escalations as desired.
+# Note:  A user's regex must always include the PrettyName
+# u:PrettyName, Regex, Phone, AccessLevel
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+group: Ops
+    u: Rick, rick|ennis, 1234567890, 100
+    u: DavidF, davidf|franz, 1234567891, 100
+    u: Sean, sean|smith, 1234567892, 100
+
+group: StationRelations
+    u: Sara, sara|jones, 1234567893, 20
+    u: Janeen, janeen|jan|robins, 1234567894, 20
+    u: Sabrina, sabrina, 1234567895, 20
+    u: DavidC, davidc|cooper, 1234567896, 20
+    u: Jeff, jeff, 1234567897, 20
+
+
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+# Define aliases
+# Aliases are interpolated into the message before it's processed
+# They're useful as a short hand for naming multiple people or 
+# groups at once.  Aliases configured as 'hidden' are removed from
+# the message before it goes out.
+# r: Referent
+# o: Options - the only currently recognized option is 'hidden'
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+alias: allstaff
+    r: rick, davidf, sean, davidc, sara, janeen, sabrina, jeff
+    o: hidden
+
+alias: westcoasters
+    r: sara, sabrina, davidf
+
+
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+# Define escalations
+# When an escalation's name is mentioned it pulls in the current
+# on call person according to the escalation's schedule and the
+# timer is started.  If the on call person doesn't reply within
+# time (like a "hey I got it!" type of thing) the message is 
+# re-broadcast to the "escalate-to" group.
+# t: Timer in seconds
+# e: EscalationTo
+# o: Options
+# s: Schedule
+# swap_email: Who to email about the :swap command
+# alert_email: Who to email when the escalation is called (if any)
+# cancel_msg: Reply to send on call person after their "got it" (if any)
+#
+# Options can include parameters to create an RT ticket each time
+# an escalation is called (rt_queue & rt_subject).
+#
+# Schedule can either be an 8 digit date (YYYYMMDD) and a user's
+# name for who goes on call at midnight on that day.  Or it can
+# be an 8 digit date followed by the word auto and then a list
+# of names (in desired order) to automatically construct a schedule
+# from.  Auto assumes each person will have a 1 week rotation.
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+escalation:OpsCall
+    timer: 120
+    escalate_to: ops
+    swap_email: ops@mycompany.us
+    schedule: 20130821 auto/DavidF,Rick,Sean
+
+escalation:SRCall
+    timer: 300 
+    escalate_to: stationrelations, ops
+    alert_email: stationrelations@mycompany.us, techdept@mycompany.us
+    swap_email: stationrelations@mycompany.us
+    cancel_msg: Escalation canceled.
+    options: rt_queue: Emergency
+    options: rt_subject: EMERGENCY CALL
+    schedule: 20131217 Sabrina
+    schedule: 20131231 Sara
+    schedule: 20140107 auto/sara,jeff,janeen,sabrina
+
+
+# Groups or users that start with ! can't be referenced by name
+# in a page.  They're primarily to define users that messages can
+# be injected as via the CLI.  These are System Users.  They're also
+# the only users system filers apply to.
+# Note: As a final parameter a user can optionally have the "include:"
+# directive.  Include does two things.  It means *any* message submitted
+# by that user ('emergency' in the below example) will act as if the
+# message text had included the provided string ('srcall'), thereby
+# pulling srcall into the conversation.  Second, it bypasses scanning
+# the text of any message sent by that user ('emergency') for additional
+# names of users, groups or escalations.
+group:!cli
+    u:!nagios, nagios, 9999999999, 0
+    u:!emergency, emergency, 9999999998, 0, include:srcall
+    u:!signal, signal, 9999999997, 0
+
+
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+# Ambiguous user responses
+# regex, response_string
+# (this is a simple regex that only supports pipes)
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+
+ambiguous: dave|david; DavidF, DavidC, Cooper or Franz
+
+
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+# Command Permissions
+# Here you can specify what access level a user requires in order
+# to use a particular command.  Any command you don't define an
+# access level for will have a default level that's set at the
+# top of DSPS_CmdPermission.pm.
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+command: ?groups 10
+command: :swap 35
+
+
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+# System configuration
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+
+# The :maint command automatically pulls in this user if none if specified
+sys:default_maint: !nagios
+
+# Should we require the at sign in from of a user/group/escalation to recognize it
+sys:require_at: 0
+
+# Should system users appear in the room listing (?rooms command)
+sys:show_nonhuman: 0
+
+# Gateway API used to send out pages
+sys:gateway_url: http://app.signalhq.com/messages/send_individual_message
+
+# Gateway API parameters to send out pages
+sys:gateway_params: [a=123456789][c=012345][mdn=$CELLNUMBER][m=$MESSAGE]
+
+# If pages can't be sent via the gateway API (an error), where should we email them?
+sys:fallback_email: 1234567890@vtext.com
+
+# Regex defining a Recovery page.  This is configurable to make DSPS work with
+# monitoring systems other than just Nagios.  Unfortunately a number of other
+# parameters still have to be made configurable for that to actually be the case.
+sys:recovery_regex: ^[-+!]{0,1}RECOVERY\s+
+
+# CLIENT: If you want to setup a client machine that can submit pages to the
+# main DSPS server, this is where you configure where the server is running.
+sys:dsps_server: localhost:2176
+
+# SERVER: What address:port to listen on
+#sys:server_listen: 0.0.0.0:2176
+
+# Set this if you want RT integration.  It's what DSPS runs to [remotely]
+# execute RT commands.
+sys:rt_connection: /usr/bin/ssh automation@rtserver.mycompany.us /usr/bin/rt
+
+# Mail server to send outgoing mail via
+sys:smtp_server: mail.mycompany.us
+
+# Send outgoing mail from this address
+sys:smtp_from: noreply@mycompany.us
+
+# Admin's email address.  Primarily used when DSPS is run in TEST_RUN mode.
+sys:admin_email: ops@mycompany.us, rick@mycompany.us
+
+# If your gateawy provider returns user's text messages (i.e. incoming replies
+# from people's phones) to you via email and you arrange to pipe those emails
+# into DSPS then the system should look for the sender's phone number (caller
+# id) within the email to determine the true submitting user.  This tells
+# us to only look for the user when the email is handed to us by a specific
+# DSPS user.
+sys:override_user: !signal
+
+# And this explains how to find the real user's phone number within the message.
+# Note: regexs are significant from where they start to the end of the line.  So
+# if you include a trailing space at the very end of the line, it'll be required
+# too.
+sys:override_regex: ^Subject: sms_reply:(\d+)
+
+# RT link to include in escalation emails; if omitted the ticket number isn't
+# included in the email.  If alert_email is omitted from the escalation, no
+# email is generated at all.
+sys:rt_link: http://rt.mycompany.org/Ticket/Display.html?id=
+
+

@@ -1,0 +1,47 @@
+#!/bin/sh
+
+PATH=/usr/local/sbin:/usr/local/bin:/usr/local/bin/paging:/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/usr/local/bin/dsps3/dsps
+NAME=dsps
+DESC=dsps
+PIDFILE=/tmp/.$NAME.pid
+
+test -x $DAEMON || exit 0
+
+if ! [ -x "/lib/lsb/init-functions" ]; then
+        . /lib/lsb/init-functions
+else
+        echo "E: /lib/lsb/init-functions not found, lsb-base (>= 3.0-6) needed"
+        exit 1
+fi
+
+set -e
+
+case "$1" in
+  start)
+        log_daemon_msg "Starting $DESC" "$NAME"
+        start_daemon -p $PIDFILE $DAEMON -d
+        log_end_msg $?
+        ;;
+  stop)
+        log_daemon_msg "Stopping $DESC" "$NAME"
+        start-stop-daemon --stop --quiet -p $PIDFILE --oknodo 
+        log_end_msg $?
+        ;;
+  reload|force-reload)
+        log_daemon_msg "Reloading $DESC configuration files" "$NAME"
+        start-stop-daemon --stop --signal HUP -p $PIDFILE --quiet 
+        log_end_msg $?
+        ;;
+  restart)
+        log_daemon_msg "Restarting $DESC" "$NAME"
+        start_daemon -p $PIDFILE $DAEMON -d
+        log_end_msg $?
+        ;;
+  *)
+        log_failure_msg "Usage: $N {start|stop|restart|reload|force-reload}" 
+        exit 1
+        ;;
+esac
+
+exit 0
